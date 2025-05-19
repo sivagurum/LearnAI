@@ -7,10 +7,11 @@ from openai import OpenAI
 # Note: Start Local Ollama before run
 # brew services start ollama
 
+MODEL = "llama3.2"
 ollama_via_openai = OpenAI(base_url='http://localhost:11434/v1', api_key='ollama')
 
 
-MODEL = "llama3.2"
+
 input_url="https://www.engadget.com/ai/metas-behemoth-llama-4-model-might-still-be-months-away-221240585.html"
 
 # HEADERS = {"Content-Type": "application/json"}
