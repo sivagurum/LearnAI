@@ -8,7 +8,9 @@ import logging
 
 import gradio as gr
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+from src.ChatAppGemini.gemini_api_chatbot import model
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 llm = LLMManager()
@@ -47,7 +49,7 @@ def get_links_users_prompt(website: WebCrowler):
 
 def get_links(url):
     website = WebCrowler(url)
-    response = llm.ollama_openai_client.chat.completions.create(
+    response = llm.ollama_client.chat.completions.create(
         model=llm.OLLAMA_MODEL,
         messages=[
             {"role": "system", "content": link_system_prompt},
@@ -85,13 +87,13 @@ Include details of company culture, customers and careers/jobs if you have the i
 def get_brochure_user_prompt(company_name, url):
     user_prompt = f"You are looking at a company called: {company_name}\n"
     user_prompt += f"Here are the contents of its landing page and other relevant pages; use this information to build a short brochure of the company in markdown.\n"
-    user_prompt += f"And carefully translate the content into user understandable modern Tamil language in same structure."
+    #user_prompt += f"And carefully translate the content into user understandable modern Tamil language in same structure."
     user_prompt += get_all_details(url)
     user_prompt = user_prompt[:5_000] # Truncate if more than 5,000 characters
     return user_prompt
 
 # def create_brochure(company_name, url):
-#     response = llm.ollama_openai_client.chat.completions.create(
+#     response = llm.ollama_client.chat.completions.create(
 #         model=llm.OLLAMA_MODEL,
 #         messages=[
 #             {"role": "system", "content": system_prompt},
@@ -100,53 +102,26 @@ def get_brochure_user_prompt(company_name, url):
 #     )
 #     return response.choices[0].message.content
 
-def create_brochure(client_name:str, is_stream: bool, company_name: str, url: str):
-    """
-    Function to be exposed via Gradio for generating text.
-    """
-    if not url or len(url.strip()) == 0:
-        return "Please provide a URL."
-
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": get_brochure_user_prompt(company_name, url)}
-    ]
-
-    result = None
-    if client_name == "gemini":
-        result = llm.generate_gemini_text(prompt=messages, stream=is_stream)
-    elif client_name == "openai":
-        result = llm.generate_openai_text(messages=messages, stream=is_stream)
-    elif client_name == "claude":
-        result = llm.generate_claude_text(messages=messages, stream=is_stream)
-    elif client_name == "ollama":
-        result = llm.generate_ollama_text_openai_compatible(messages=messages, stream=is_stream)
-    else:
-        return "Invalid client selected."
-
-    if result is None:
-        return "Error: Could not generate response. Check logs for details."
-
-    if is_stream:
-        # Gradio will handle iterating over this generator
-        response = ""
-        for chunk in result:
-            response += chunk or ""
-            yield response
-    else:
-        # For non-streaming, return the complete string
+def create_brochure_ollama_stream(company_name, url):
+    stream = llm.ollama_client.chat.completions.create(
+        model=llm.OLLAMA_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": get_brochure_user_prompt(company_name, url)}
+          ],
+        stream=True
+    )
+    result = ""
+    for chunk in stream:
+        result += chunk.choices[0].delta.content or ""
         yield result
+
 
 #print(create_brochure("HuggingFace", "https://huggingface.co"))
 
 view = gr.Interface(
-    fn=create_brochure,
-    inputs=[
-            gr.Dropdown(choices=["gemini", "openai", "claude", "ollama"], label="Select LLM Client", value="ollama"),
-            gr.Checkbox(label="Stream Output", value=False),
-            gr.Textbox(label="Company Name:"),
-            gr.Textbox(label="URL", placeholder="Enter URL here...")
-    ],
+    fn=create_brochure_ollama_stream,
+    inputs=[gr.Textbox(label="Company Name:"), gr.Textbox(label="URL:")],
     outputs=[gr.Markdown(label="Response: ")],
     flagging_mode="never"
 )

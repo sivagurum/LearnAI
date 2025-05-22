@@ -10,8 +10,6 @@ from openai import OpenAI
 MODEL = "llama3.2"
 ollama_via_openai = OpenAI(base_url='http://localhost:11434/v1', api_key='ollama')
 
-
-
 input_url="https://www.engadget.com/ai/metas-behemoth-llama-4-model-might-still-be-months-away-221240585.html"
 
 # HEADERS = {"Content-Type": "application/json"}
