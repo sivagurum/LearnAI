@@ -294,7 +294,7 @@ class LLMManager:
             if chunk.text:
                 yield chunk.text
 
-    def generate_gemini_text(self, prompt: Union[str, List[Dict[str, str]]], model: str = None, max_output_tokens: Optional[int] = None,
+    def generate_gemini_text(self, prompt: str, model: str = None, max_output_tokens: Optional[int] = None,
                              response_schema: Optional[BaseModel] = None, response_mime_type: Optional[str] = None,
                              temperature: Optional[float] = None, stream: bool = False) -> Union[str, Generator[str, None, None], None]:
         """
@@ -306,9 +306,9 @@ class LLMManager:
             logger.error("Gemini API not configured. Cannot generate text.")
             return None
 
-        # if not prompt or (isinstance(prompt, str) and len(prompt.strip()) == 0) == 0:
-        #     logger.error(f"Gemini client prompt not passed or is empty. Cannot generate text. {prompt}")
-        #     return None
+        if not prompt or (isinstance(prompt, str) and len(prompt.strip()) == 0) == 0:
+            logger.error(f"Gemini client prompt not passed or is empty. Cannot generate text. {prompt}")
+            return None
 
         used_model = model if model else self.GEMINI_MODEL
         gemini_model_instance = genai.GenerativeModel(used_model)
